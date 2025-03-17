@@ -137,6 +137,7 @@
 <div id="bottom-panel">
   <button id="endTurnBtn">ターン終了</button>
   <div id="msg"></div>
+  <label><input type="checkbox" id="spectateCheckbox"> 観戦する</label>
 </div>
 <!------------------------------------------------------------------------------------------------------------------------->
 <!-- 効果音 -->
@@ -272,7 +273,7 @@ function init(){
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// セルクリック処理（プレイヤー操作）
+// プレイヤーのクリック操作
 function clickCell(i){
   if(turnOrder[turn%4]!=0||gameOver)return;
   const c=cells[i];
@@ -284,6 +285,7 @@ function clickCell(i){
     if(c.owner!=0&&isAdj(selected.idx,i)){
       battle(selected,c);
       playerActed = true; // プレイヤーが行動した
+      // 観戦モードが有効ならCPUのターンを実行
     }
     selected.el.classList.remove('selected');selected=null;play('selectSound');
     }
@@ -341,19 +343,40 @@ function cpuTurn(p){
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // ターン進行管理関数
 function updateTurn(){
+  // ゲームが終了している場合は何もしない
   if(gameOver)return;
+  
+  // 現在のプレイヤーを取得
   const p=turnOrder[turn%4];
+  
+  // ターン情報を表示
   document.getElementById('turnInfo').textContent=`ターン：${["あなた","CPU1","CPU2","CPU3"][p]}`;
+  
+  // 現在のプレイヤーが人間でない場合、終了ボタンを無効化
   document.getElementById('endTurnBtn').disabled=p!=0;
+  
+  // 現在のプレイヤーが人間の場合
   if(p==0){
+    // ターン開始音を再生
     play('turnSound');
+    if(document.getElementById('spectateCheckbox').checked) {
+        cpuTurn(turnOrder[(turn + 1) % 4]);
+      }
+    // 人間プレイヤーが所有するセルがない場合
     if(cells.filter(c=>c.owner==0).length==0){
+      // 終了ボタンを無効化し、サイコロを追加して次のターンへ
       document.getElementById('endTurnBtn').disabled=true;
-      addDiceToPlayer(0);turn++;updateTurn();
+      addDiceToPlayer(0);
+      turn++;
+      updateTurn();
     }
   }
+  // 現在のプレイヤーがCPUの場合
   else {
-    play('turnSound'); // Play sound effect for CPU turn
+    // CPUターン開始音を再生
+    play('turnSound');
+    
+    // 800ms後にCPUのターン処理を実行
     setTimeout(()=>cpuTurn(p),800);
   }
 }
